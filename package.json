@@ -1,0 +1,11 @@
+{
+  "name": "bookmarklets",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Bookmarklet library viewer",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "npm run dev",
+    "test": "echo \"No tests configured\""
+  }
+}

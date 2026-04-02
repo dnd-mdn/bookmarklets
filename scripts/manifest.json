@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Test Script",
+    "file": "test.js",
+    "description": "Simple example bookmarklet.",
+    "version": "2026-04-02"  
+  },
+  {
+    "name": "Canada Links",
+    "file": "links.js",
+    "description": "Bookmarklet that provides quick links for Canada.ca pages.",
+    "version": "2026-04-02"
+  }
+]

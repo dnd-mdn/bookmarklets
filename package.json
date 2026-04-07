@@ -4,8 +4,8 @@
   "private": true,
   "description": "Bookmarklet library viewer",
   "scripts": {
-    "dev": "node server.js",
-    "start": "npm run dev",
+    "build": "node build.js",
+    "dev": "node build.js && node server.js",
     "test": "echo \"No tests configured\""
   }
 }

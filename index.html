@@ -4,303 +4,523 @@
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>Bookmarklet Library</title>
-	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" integrity="sha256-PI8n5gCcz9cQqQXm3PEtDuPG8qx9oFsFctPg0S5zb8g=" crossorigin="anonymous">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@vscode/codicons@0.0.36/dist/codicon.css" integrity="sha256-+Hv3TKvaeSnngs6DqQ76ZjZ/u+SHB5gCi/11WR7Yfx8=" crossorigin="anonymous">
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/editor/editor.main.min.css" integrity="sha256-+0Bqa3EGZmDaai2pwA3tkb/Xdikf0AHpVcmqi5PVB6w=" crossorigin="anonymous">
 	<style>
-		html,
-		body {
+		:root {
+			--vsc-activitybar-bg: #333333;
+			--vsc-activitybar-w:  48px;
+			--vsc-sidebar-bg:    #252526;
+			--vsc-sidebar-w:     240px;
+			--vsc-editor-bg:     #1e1e1e;
+			--vsc-border:        #252526;
+			--vsc-text:          #cccccc;
+			--vsc-text-dim:      #6e6e6e;
+			--vsc-accent:        #007acc;
+			--vsc-hover:         #2a2d2e;
+			--vsc-selected:      #37373d;
+			--vsc-js-icon:       #e2c07b;
+		}
+
+		*, *::before, *::after { box-sizing: border-box; }
+
+		html, body {
 			height: 100%;
+			margin: 0;
+			padding: 0;
+			overflow: hidden;
+			background: var(--vsc-editor-bg);
+			color: var(--vsc-text);
+			font-family: "Segoe UI", system-ui, sans-serif;
+			font-size: 13px;
 		}
 
-		body {
-			margin: 0;
-			height: 100dvh;
-			min-height: 100dvh;
+		/* ── App shell ── */
+		.vsc-app {
 			display: flex;
 			flex-direction: column;
-			overflow: hidden;
-			font-family: "Segoe UI", sans-serif;
-			background:
-				radial-gradient(circle at 10% 20%, #fff4cf 0%, transparent 38%),
-				radial-gradient(circle at 85% 15%, #cceee0 0%, transparent 40%),
-				#f6f4ef;
+			height: 100vh;
 		}
 
-		.top-navbar {
-			background: linear-gradient(90deg, rgba(8, 20, 33, 0.95) 0%, rgba(23, 43, 62, 0.95) 100%);
-			border-bottom: 1px solid rgba(182, 156, 92, 0.35);
+		/* ── Workbench (activity bar + sidebar + editor) ── */
+		.vsc-workbench {
+			display: flex;
+			flex: 1;
+			min-height: 0;
 		}
 
-		.top-navbar .navbar-brand {
-			font-weight: 600;
-			letter-spacing: 0.02em;
-		}
-
-		.main-shell {
+		/* ── Activity bar ── */
+		.vsc-activitybar {
+			width: var(--vsc-activitybar-w);
+			background: var(--vsc-activitybar-bg);
 			display: flex;
 			flex-direction: column;
-			flex: 1;
-			min-height: 0;
-			padding: 1rem;
+			align-items: center;
+			padding-top: 4px;
+			flex-shrink: 0;
+			border-right: 1px solid var(--vsc-border);
+		}
+
+		.activity-btn {
+			width: 48px;
+			height: 48px;
+			background: none;
+			border: none;
+			cursor: pointer;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: rgba(255, 255, 255, 0.4);
+			font-size: 22px;
+			position: relative;
+			outline: none;
+		}
+		.activity-btn:hover { color: rgba(255, 255, 255, 0.8); }
+		.activity-btn.active { color: #fff; }
+		.activity-btn.active::before {
+			content: '';
+			position: absolute;
+			left: 0;
+			top: 12%;
+			height: 76%;
+			width: 2px;
+			background: #fff;
+		}
+
+		/* ── Sidebar ── */
+		.vsc-sidebar {
+			width: var(--vsc-sidebar-w);
+			background: var(--vsc-sidebar-bg);
+			display: flex;
+			flex-direction: column;
+			flex-shrink: 0;
+			border-right: 1px solid var(--vsc-border);
 			overflow: hidden;
 		}
 
-		.main-row {
-			flex: 1;
-			min-height: 0;
-			margin: 0;
-			--bs-gutter-x: 1rem;
-			--bs-gutter-y: 1rem;
+		.sidebar-panel-title {
+			padding: 10px 12px 6px;
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: 0.1em;
+			text-transform: uppercase;
+			flex-shrink: 0;
+			user-select: none;
 		}
 
-		.card {
-			border-color: #d7d0c4;
-			box-shadow: 0 8px 20px rgba(30, 33, 36, 0.08);
+		.sidebar-section-title {
+			padding: 3px 8px;
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: 0.05em;
+			text-transform: uppercase;
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			cursor: default;
+			flex-shrink: 0;
+			user-select: none;
 		}
 
 		#script-list {
+			list-style: none;
+			margin: 0;
+			padding: 0;
 			flex: 1;
-			max-height: none;
-			overflow: auto;
+			overflow-y: auto;
 		}
+		#script-list::-webkit-scrollbar { width: 6px; }
+		#script-list::-webkit-scrollbar-thumb { background: #424242; border-radius: 3px; }
 
-		.script-item-btn {
-			white-space: normal;
-		}
-
-		.script-item-btn.active {
-			background-color: #0f6d57;
-			border-color: #0f6d57;
-		}
-
-		#editor {
-			min-height: 0;
-			flex: 1;
-			border-radius: 0 0 var(--bs-card-border-radius) var(--bs-card-border-radius);
+		.file-item {
+			display: flex;
+			align-items: center;
+			gap: 5px;
+			padding: 2px 6px 2px 22px;
+			cursor: pointer;
+			color: var(--vsc-text);
+			height: 22px;
+			white-space: nowrap;
 			overflow: hidden;
 		}
-
-		#status {
-			min-height: 1.1rem;
+		.file-item:hover { background: var(--vsc-hover); }
+		.file-item.active { background: var(--vsc-selected); }
+		.file-item .file-icon {
+			color: var(--vsc-js-icon);
+			font-size: 14px;
+			flex-shrink: 0;
+		}
+		.file-item .file-name {
+			overflow: hidden;
+			text-overflow: ellipsis;
 		}
 
-		@media (max-width: 860px) {
-			body {
-				height: auto;
-				min-height: 100vh;
-				overflow: auto;
-			}
+		.sidebar-footer {
+			padding: 5px 12px;
+			font-size: 11px;
+			color: var(--vsc-text-dim);
+			flex-shrink: 0;
+			border-top: 1px solid var(--vsc-border);
+		}
 
-			.main-shell {
-				overflow: visible;
-			}
+		/* ── Help panel ── */
+		.help-panel {
+			padding: 12px 14px;
+			overflow-y: auto;
+			flex: 1;
+		}
+		.help-panel h3 {
+			font-size: 11px;
+			font-weight: 700;
+			letter-spacing: 0.05em;
+			text-transform: uppercase;
+			margin: 0 0 8px;
+			color: var(--vsc-text);
+		}
+		.help-panel p, .help-panel li {
+			font-size: 12px;
+			color: #aaaaaa;
+			line-height: 1.6;
+			margin: 0 0 6px;
+		}
+		.help-panel ul {
+			padding-left: 16px;
+			margin: 0 0 12px;
+		}
+		.help-panel code {
+			background: #3a3a3a;
+			border-radius: 3px;
+			padding: 1px 4px;
+			font-family: "Cascadia Code", Consolas, monospace;
+			font-size: 11px;
+			color: #ce9178;
+		}
 
-			.main-row {
-				min-height: auto;
-			}
+		/* ── Editor area ── */
+		.vsc-editor-area {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			min-width: 0;
+			background: var(--vsc-editor-bg);
+		}
 
-			#editor {
-				min-height: 320px;
-			}
+		/* ── Editor action bar (breadcrumb style) ── */
+		.vsc-editorbar {
+			height: 34px;
+			background: var(--vsc-editor-bg);
+			border-bottom: 1px solid #303030;
+			display: flex;
+			align-items: center;
+			padding: 0 12px;
+			gap: 10px;
+			flex-shrink: 0;
+		}
+		.bookmarklet-btn {
+			background: #0e639c;
+			color: #fff;
+			border: none;
+			padding: 3px 10px;
+			font-size: 12px;
+			cursor: grab;
+			border-radius: 3px;
+			text-decoration: none;
+			display: inline-flex;
+			align-items: center;
+			gap: 5px;
+			white-space: nowrap;
+			line-height: 1.6;
+		}
+		.bookmarklet-btn:hover { background: #1177bb; color: #fff; text-decoration: none; }
+		.bookmarklet-hint { font-size: 11px; color: var(--vsc-text-dim); }
+
+		/* ── Monaco editor wrapper ── */
+		#editor { flex: 1; min-height: 0; }
+		.monaco-editor .jsdoc-tag-highlight {
+			color: #569cd6 !important;
+			font-weight: 400;
+		}
+		.monaco-editor .jsdoc-value-highlight {
+			color: #6a9955 !important;
+		}
+
+		/* ── Responsive ── */
+		@media (max-width: 680px) {
+			.vsc-activitybar { display: none; }
+			.vsc-sidebar { width: 100%; max-height: 180px; border-right: none; border-bottom: 1px solid var(--vsc-border); }
+			.vsc-workbench { flex-direction: column; }
+			.vsc-app { height: auto; min-height: 100vh; overflow-y: auto; }
+			#editor { min-height: 300px; }
 		}
 	</style>
-
 </head>
 <body>
-	<nav class="navbar navbar-expand-lg navbar-dark top-navbar px-3 px-lg-4">
-		<a class="navbar-brand" href="#">Bookmarklet Library</a>
-		<div class="ms-auto text-white-50 small">Library Viewer</div>
-	</nav>
+<div class="vsc-app">
 
-	<div class="container-fluid main-shell">
-		<div class="row g-3 main-row">
-			<aside class="col-12 col-lg-3">
-				<div class="card h-100">
-					<div class="card-body d-flex flex-column gap-2">
-						<h1 class="h5 mb-0">Bookmarklet Library</h1>
-						<p class="text-body-secondary mb-2">Select a script to preview and generate a draggable bookmarklet link.</p>
-						<ul id="script-list" class="list-group list-group-flush rounded"></ul>
-						<p id="status" class="small text-body-secondary mt-auto mb-0" aria-live="polite"></p>
-					</div>
+	<!-- Workbench -->
+	<div class="vsc-workbench">
+
+		<!-- Activity bar -->
+		<div class="vsc-activitybar">
+			<button class="activity-btn active" id="btn-explorer" title="Explorer" onclick="showPanel('explorer')">
+				<i class="codicon codicon-files"></i>
+			</button>
+			<button class="activity-btn" id="btn-help" title="Help" onclick="showPanel('help')">
+				<i class="codicon codicon-question"></i>
+			</button>
+		</div>
+
+		<!-- Sidebar / Explorer -->
+		<div class="vsc-sidebar">
+			<!-- Explorer panel -->
+			<div id="panel-explorer" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+				<div class="sidebar-panel-title">Explorer</div>
+				<div class="sidebar-section-title">
+					<i class="codicon codicon-chevron-down"></i>
+					Bookmarklets
 				</div>
-			</aside>
+				<ul id="script-list" aria-label="Bookmarklet scripts"></ul>
+				<div class="sidebar-footer" id="sidebar-footer"></div>
+			</div>
 
-			<main class="col-12 col-lg-9">
-				<div class="card h-100 d-flex flex-column">
-					<div class="card-header bg-white py-3">
-						<h2 id="script-name" class="h4 mb-1">No script selected</h2>
-						<p id="script-meta" class="text-body-secondary small mb-0"></p>
-					</div>
-
-					<div class="px-3 py-3 border-bottom d-flex flex-wrap align-items-center gap-2 flex-shrink-0">
-						<a id="bookmarklet-link" class="btn btn-success rounded-pill" href="#">Drag to Bookmarks Bar</a>
-						<p class="text-body-secondary small mb-0">Drag this button into your browser bookmarks/favorites bar.</p>
-					</div>
-
-					<section id="editor" aria-label="Bookmarklet source code"></section>
+			<!-- Help panel -->
+			<div id="panel-help" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+				<div class="sidebar-panel-title">Help</div>
+				<div class="help-panel">
+					<h3>Getting started</h3>
+					<p>Select a script in the Explorer to preview its source code and prepare a bookmarklet.</p>
+					<h3>Using a bookmarklet</h3>
+					<ul>
+						<li>Drag the blue button into your browser's bookmarks bar.</li>
+						<li>Navigate to a page the script supports, then click the bookmark to run it.</li>
+						<li>If your browser hides the bookmarks bar, enable it first so you can drop the bookmarklet there.</li>
+					</ul>
+					<h3>Tips</h3>
+					<ul>
+						<li>Some bookmarklets only work on specific websites.</li>
+						<li>You can inspect the code in the editor before adding the bookmarklet.</li>
+					</ul>
 				</div>
-			</main>
+			</div>
+		</div>
+
+		<!-- Editor area -->
+		<div class="vsc-editor-area">
+
+			<!-- Breadcrumb / action bar -->
+			<div class="vsc-editorbar">
+				<a id="bookmarklet-link" class="bookmarklet-btn" href="#">
+					<i class="codicon codicon-bookmark"></i>
+					Drag to Bookmarks Bar
+				</a>
+				<span class="bookmarklet-hint">Drag to your browser's bookmarks bar</span>
+			</div>
+
+			<!-- Monaco Editor -->
+			<div id="editor" aria-label="Bookmarklet source code"></div>
 		</div>
 	</div>
+	<span id="status" hidden></span>
+</div>
 
-	<script>
-		const scriptListEl = document.getElementById("script-list");
-		const statusEl = document.getElementById("status");
-		const scriptNameEl = document.getElementById("script-name");
-		const scriptMetaEl = document.getElementById("script-meta");
-		const bookmarkletLinkEl = document.getElementById("bookmarklet-link");
+<script>
+	const scriptListEl      = document.getElementById("script-list");
+	const statusEl          = document.getElementById("status");
+	const bookmarkletLinkEl = document.getElementById("bookmarklet-link");
+	const sidebarFooterEl   = document.getElementById("sidebar-footer");
 
-		let editor;
-		let currentButton = null;
+	let editor;
+	let activeItem = null;
+	let jsDocDecorationIds = [];
 
-		function setStatus(message) {
-			statusEl.textContent = message;
+	function showPanel(name) {
+		document.getElementById('panel-explorer').style.display = name === 'explorer' ? 'flex' : 'none';
+		document.getElementById('panel-help').style.display     = name === 'help'     ? 'flex' : 'none';
+		document.getElementById('btn-explorer').classList.toggle('active', name === 'explorer');
+		document.getElementById('btn-help').classList.toggle('active', name === 'help');
+	}
+
+	function setStatus(message) {
+		statusEl.textContent = message;
+	}
+
+	async function encodeBookmarkletHref(scriptSource) {
+		const result = await Terser.minify(scriptSource, {
+			compress: true,
+			mangle: true
+		});
+		return "javascript:" + encodeURIComponent(result.code);
+	}
+
+	async function fetchJson(path) {
+		const response = await fetch(path, { cache: "no-store" });
+		if (!response.ok) {
+			throw new Error(`Failed to fetch ${path}: ${response.status}`);
+		}
+		return response.json();
+	}
+
+	async function fetchScript(path) {
+		const response = await fetch(path, { cache: "no-store" });
+		if (!response.ok) {
+			throw new Error(`Failed to fetch ${path}: ${response.status}`);
+		}
+		return response.text();
+	}
+
+	function updateJsDocDecorations(source) {
+		const model = editor.getModel();
+		if (!model) {
+			return;
 		}
 
-		async function encodeBookmarkletHref(scriptSource) {
-			const result = await Terser.minify(scriptSource, {
-				compress: true,
-				mangle: true
-			});
-			return "javascript:" + encodeURIComponent(result.code);
-		}
+		const decorations = [];
+		const blockPattern = /\/\*\*[\s\S]*?\*\//g;
+		let blockMatch;
 
-		async function fetchJson(path) {
-			const response = await fetch(path, { cache: "no-store" });
-			if (!response.ok) {
-				throw new Error(`Failed to fetch ${path}: ${response.status}`);
-			}
-			return response.json();
-		}
+		while ((blockMatch = blockPattern.exec(source)) !== null) {
+			const blockText = blockMatch[0];
+			const blockOffset = blockMatch.index;
 
-		async function fetchScript(path) {
-			const response = await fetch(path, { cache: "no-store" });
-			if (!response.ok) {
-				throw new Error(`Failed to fetch ${path}: ${response.status}`);
-			}
-			return response.text();
-		}
-
-		function updateSelectedButton(nextButton) {
-			if (currentButton) {
-				currentButton.removeAttribute("aria-current");
-				currentButton.classList.remove("active");
-			}
-			currentButton = nextButton;
-			if (currentButton) {
-				currentButton.setAttribute("aria-current", "true");
-				currentButton.classList.add("active");
-			}
-		}
-
-		async function loadScript(entry, buttonEl) {
-			try {
-				setStatus("Loading script...");
-				const path = `scripts/${entry.file}`;
-				const source = await fetchScript(path);
-				const metaParts = [entry.file];
-				if (entry.version) {
-					metaParts.push(`Version: ${entry.version}`);
-				}
-				if (entry.description) {
-					metaParts.push(entry.description);
-				}
-				editor.setValue(source);
-				scriptNameEl.textContent = entry.name;
-				scriptMetaEl.textContent = metaParts.join(" - ");
-				bookmarkletLinkEl.textContent = entry.name;
-				bookmarkletLinkEl.href = await encodeBookmarkletHref(source);
-				updateSelectedButton(buttonEl);
-				setStatus("Ready");
-			} catch (error) {
-				setStatus(error.message);
-			}
-		}
-
-		function normalizeEntry(rawEntry) {
-			if (typeof rawEntry === "string") {
-				return {
-					name: rawEntry.replace(/\.js$/i, ""),
-					file: rawEntry,
-					description: ""
-				};
-			}
-			if (!rawEntry || typeof rawEntry.file !== "string") {
-				throw new Error("Invalid manifest entry. Use a string filename or an object with a file property.");
-			}
-			return {
-				name: rawEntry.name || rawEntry.file.replace(/\.js$/i, ""),
-				file: rawEntry.file,
-				description: rawEntry.description || "",
-				version: rawEntry.version || ""
-			};
-		}
-
-		function renderList(entries) {
-			scriptListEl.innerHTML = "";
-
-			entries.forEach((entry) => {
-				const li = document.createElement("li");
-				li.className = "list-group-item p-0 border-0";
-
-				const button = document.createElement("button");
-				button.type = "button";
-				button.className = "script-item-btn list-group-item list-group-item-action";
-				button.textContent = entry.name;
-				button.title = entry.file;
-				button.addEventListener("click", () => loadScript(entry, button));
-
-				li.appendChild(button);
-				scriptListEl.appendChild(li);
-			});
-		}
-
-		function createEditor() {
-			return new Promise((resolve) => {
-				window.require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs" } });
-				window.require(["vs/editor/editor.main"], () => {
-					const monacoEditor = monaco.editor.create(document.getElementById("editor"), {
-						value: "// Pick a script from the left panel",
-						language: "javascript",
-						readOnly: true,
-						automaticLayout: true,
-						minimap: { enabled: false },
-						lineNumbersMinChars: 3,
-						tabSize: 4,
-						insertSpaces: true,
-						theme: "vs"
-					});
-					resolve(monacoEditor);
+			for (const tagMatch of blockText.matchAll(/@[a-zA-Z][\w-]*/g)) {
+				const start = model.getPositionAt(blockOffset + tagMatch.index);
+				const end = model.getPositionAt(blockOffset + tagMatch.index + tagMatch[0].length);
+				decorations.push({
+					range: new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column),
+					options: { inlineClassName: "jsdoc-tag-highlight" }
 				});
-			});
-		}
+			}
 
-		async function init() {
-			try {
-				setStatus("Loading editor...");
-				editor = await createEditor();
-
-				setStatus("Loading manifest...");
-				const manifest = await fetchJson("scripts/manifest.json");
-				const entries = manifest.map(normalizeEntry);
-
-				if (entries.length === 0) {
-					setStatus("No scripts listed in scripts/manifest.json");
-					return;
-				}
-
-				renderList(entries);
-				await loadScript(entries[0], scriptListEl.querySelector("button"));
-			} catch (error) {
-				setStatus(error.message);
+			for (const valueMatch of blockText.matchAll(/@[a-zA-Z][\w-]*\s+([^\n\r*]+)/g)) {
+				const value = valueMatch[1];
+				const valueStartOffset = blockOffset + valueMatch.index + valueMatch[0].lastIndexOf(value);
+				const start = model.getPositionAt(valueStartOffset);
+				const end = model.getPositionAt(valueStartOffset + value.length);
+				decorations.push({
+					range: new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column),
+					options: { inlineClassName: "jsdoc-value-highlight" }
+				});
 			}
 		}
 
-		window.addEventListener("load", init);
-	</script>
-	<script src="https://cdn.jsdelivr.net/npm/terser@5/dist/bundle.min.js" integrity="sha256-i6/IavlSkPPuKNP1Sjzv+X6F30QDdPCNjEhKI2uFDns=" crossorigin="anonymous"></script>
-	<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/loader.js" crossorigin="anonymous"></script>
-	<script src="https://cdn.jsdelivr.net/npm/jquery@4.0.0/dist/jquery.min.js" integrity="sha256-OaVG6prZf4v69dPg6PhVattBXkcOWQB62pdZ3ORyrao=" crossorigin="anonymous"></script>
-	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha256-CDOy6cOibCWEdsRiZuaHf8dSGGJRYuBGC+mjoJimHGw=" crossorigin="anonymous"></script>
+		jsDocDecorationIds = editor.deltaDecorations(jsDocDecorationIds, decorations);
+	}
+
+	async function loadScript(entry, listItemEl) {
+		try {
+			setStatus("Loading…");
+			if (activeItem) activeItem.classList.remove("active");
+			activeItem = listItemEl;
+			if (activeItem) activeItem.classList.add("active");
+			const source = await fetchScript(`scripts/${entry.file}`);
+			editor.setValue(source);
+			updateJsDocDecorations(source);
+			bookmarkletLinkEl.innerHTML = `<i class="codicon codicon-bookmark"></i> ${entry.name}`;
+			bookmarkletLinkEl.href = await encodeBookmarkletHref(source);
+			setStatus("Ready");
+		} catch (error) {
+			setStatus(error.message);
+		}
+	}
+
+	function normalizeEntry(rawEntry) {
+		if (typeof rawEntry === "string") {
+			return { name: rawEntry.replace(/\.js$/i, ""), file: rawEntry, description: "" };
+		}
+		if (!rawEntry || typeof rawEntry.file !== "string") {
+			throw new Error("Invalid manifest entry. Use a string filename or an object with a file property.");
+		}
+		return {
+			name:        rawEntry.name || rawEntry.file.replace(/\.js$/i, ""),
+			file:        rawEntry.file,
+			description: rawEntry.description || "",
+			version:     rawEntry.version || ""
+		};
+	}
+
+	function renderList(entries) {
+		scriptListEl.innerHTML = "";
+		entries.forEach(entry => {
+			const li = document.createElement("li");
+			li.className = "file-item";
+			li.setAttribute("data-file", entry.file);
+			li.title = entry.file;
+			li.innerHTML = `
+				<i class="file-icon codicon codicon-file-code"></i>
+				<span class="file-name">${entry.name}</span>
+			`;
+			li.addEventListener("click", () => loadScript(entry, li));
+			scriptListEl.appendChild(li);
+		});
+		sidebarFooterEl.textContent = `${entries.length} script${entries.length !== 1 ? "s" : ""}`;
+	}
+
+	function createEditor() {
+		return new Promise((resolve) => {
+			window.require.config({ paths: { vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs" } });
+			window.require(["vs/editor/editor.main"], () => {
+				monaco.editor.defineTheme("bookmarklets-dark", {
+					base: "vs-dark",
+					inherit: true,
+					colors: {
+						"editor.background": "#1E1E1E",
+						"editor.foreground": "#D4D4D4",
+						"editorLineNumber.foreground": "#858585",
+						"editorLineNumber.activeForeground": "#C6C6C6"
+					},
+					rules: [
+						{ token: "comment.doc", foreground: "6A9955" },
+						{ token: "comment.doc.js", foreground: "6A9955" },
+						{ token: "comment.doc.keyword", foreground: "4FC1FF", fontStyle: "bold" },
+						{ token: "comment.doc.keyword.js", foreground: "4FC1FF", fontStyle: "bold" },
+						{ token: "comment.doc.tag", foreground: "4FC1FF", fontStyle: "bold" },
+						{ token: "comment.doc.tag.js", foreground: "4FC1FF", fontStyle: "bold" },
+						{ token: "comment.doc.type", foreground: "DCDCAA" },
+						{ token: "comment.doc.type.js", foreground: "DCDCAA" }
+					]
+				});
+
+				const monacoEditor = monaco.editor.create(document.getElementById("editor"), {
+					value: "// Pick a script from the left panel",
+					language: "javascript",
+					readOnly: true,
+					automaticLayout: true,
+					minimap: { enabled: false },
+					lineNumbersMinChars: 3,
+					tabSize: 4,
+					insertSpaces: true,
+					theme: "bookmarklets-dark",
+					scrollBeyondLastLine: false
+				});
+				resolve(monacoEditor);
+			});
+		});
+	}
+
+	async function init() {
+		try {
+			setStatus("Loading editor…");
+			editor = await createEditor();
+
+			setStatus("Loading manifest…");
+			const manifest = await fetchJson("scripts/manifest.json");
+			const entries = manifest.map(normalizeEntry);
+
+			if (entries.length === 0) {
+				setStatus("No scripts listed in scripts/manifest.json");
+				return;
+			}
+
+			renderList(entries);
+			loadScript(entries[0], scriptListEl.querySelector(".file-item"));
+		} catch (error) {
+			setStatus(error.message);
+		}
+	}
+
+	window.addEventListener("load", init);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/terser@5/dist/bundle.min.js" integrity="sha256-i6/IavlSkPPuKNP1Sjzv+X6F30QDdPCNjEhKI2uFDns=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/loader.js" crossorigin="anonymous"></script>
 </body>
 </html>

@@ -1,14 +1,14 @@
 [
   {
-    "name": "Test Script",
-    "file": "test.js",
-    "description": "Simple example bookmarklet.",
-    "version": "2026-04-02"  
+    "file": "aem-html-editor.js",
+    "name": "AEM HTML Editor",
+    "description": "Replaces AEM's raw HTML textareas with a full-featured Monaco Editor.",
+    "version": "2026-04-07"
   },
   {
+    "file": "canada-links.js",
     "name": "Canada Links",
-    "file": "links.js",
-    "description": "Bookmarklet that provides quick links for Canada.ca pages.",
+    "description": "Provides quick links for navigating canada.ca and its author environment.",
     "version": "2026-04-02"
   }
 ]

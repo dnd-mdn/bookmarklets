@@ -1,12 +1,17 @@
+/**
+ * @name Canada Links
+ * @description Provides quick links for navigating canada.ca and its author environment.
+ * @version 2026-04-02
+ */
 (function () {
 
     // Only run on canada.ca pages
     if (window.location.origin !== "https://www.canada.ca") return;
-    
+
     // Find the language toggle list
     const list = document.querySelector("#wb-lng ul.list-inline");
     if (!list) return;
-    
+
     const author = "https://author-canada-prod.adobecqms.net";
     const path = "/content/canadasite" + window.location.pathname.replace('\.html', '');
 

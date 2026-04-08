@@ -233,6 +233,23 @@
 		}
 		.bookmarklet-btn:hover { background: #1177bb; color: #fff; text-decoration: none; }
 		.bookmarklet-hint { font-size: 11px; color: var(--vsc-text-dim); }
+		.modified-pill {
+			display: none;
+			align-items: center;
+			gap: 5px;
+			height: 22px;
+			padding: 0 8px;
+			border-radius: 999px;
+			font-size: 11px;
+			font-weight: 600;
+			letter-spacing: 0.02em;
+			background: rgba(211, 153, 58, 0.2);
+			color: #d7ba7d;
+			border: 1px solid rgba(215, 186, 125, 0.35);
+		}
+		.modified-pill.is-visible {
+			display: inline-flex;
+		}
 
 		/* ── Monaco editor wrapper ── */
 		#editor { flex: 1; min-height: 0; }
@@ -313,6 +330,10 @@
 					<i class="codicon codicon-bookmark"></i>
 					Drag to Bookmarks Bar
 				</a>
+				<span id="modified-pill" class="modified-pill">
+					<i class="codicon codicon-warning"></i>
+					Modified locally
+				</span>
 				<span class="bookmarklet-hint">Drag to your browser's bookmarks bar</span>
 			</div>
 
@@ -327,6 +348,7 @@
 	const scriptListEl      = document.getElementById("script-list");
 	const statusEl          = document.getElementById("status");
 	const bookmarkletLinkEl = document.getElementById("bookmarklet-link");
+	const modifiedPillEl    = document.getElementById("modified-pill");
 	const sidebarFooterEl   = document.getElementById("sidebar-footer");
 
 	let editor;
@@ -335,6 +357,7 @@
 	let jsDocDecorationIds = [];
 	let bookmarkletUpdateTimer = null;
 	let bookmarkletUpdateVersion = 0;
+	let loadedScriptSource = "";
 
 	function showPanel(name) {
 		document.getElementById('panel-explorer').style.display = name === 'explorer' ? 'flex' : 'none';
@@ -348,11 +371,26 @@
 	}
 
 	async function encodeBookmarkletHref(scriptSource) {
-		const result = await Terser.minify(scriptSource, {
-			compress: true,
-			mangle: true
-		});
-		return "javascript:" + encodeURIComponent(result.code);
+		try {
+			const result = await Terser.minify(scriptSource, {
+				compress: true,
+				mangle: true
+			});
+
+			if (!result.code) {
+				throw new Error("Minifier returned no output.");
+			}
+
+			return {
+				href: "javascript:" + encodeURIComponent(result.code),
+				status: "Ready"
+			};
+		} catch (error) {
+			return {
+				href: "javascript:" + encodeURIComponent(scriptSource),
+				status: `JavaScript is invalid; using unminified source. ${error.message}`
+			};
+		}
 	}
 
 	async function fetchJson(path) {
@@ -380,7 +418,7 @@
 		bookmarkletLinkEl.innerHTML = `<i class="codicon codicon-bookmark"></i> ${activeEntry.name}`;
 
 		try {
-			const href = await encodeBookmarkletHref(scriptSource);
+			const { href, status } = await encodeBookmarkletHref(scriptSource);
 
 			if (updateVersion !== bookmarkletUpdateVersion) {
 				return;
@@ -388,7 +426,7 @@
 
 			bookmarkletLinkEl.href = href;
 			bookmarkletLinkEl.setAttribute("href", href);
-			setStatus("Ready");
+			setStatus(status);
 		} catch (error) {
 			if (updateVersion !== bookmarkletUpdateVersion) {
 				return;
@@ -417,6 +455,11 @@
 			bookmarkletUpdateTimer = null;
 			syncBookmarkletFromEditor();
 		}, 200);
+	}
+
+	function updateModifiedState(source) {
+		const isModified = !!activeEntry && source !== loadedScriptSource;
+		modifiedPillEl.classList.toggle("is-visible", isModified);
 	}
 
 	function updateJsDocDecorations(source) {
@@ -465,8 +508,10 @@
 			activeEntry = entry;
 			if (activeItem) activeItem.classList.add("active");
 			const source = await fetchScript(`scripts/${entry.file}`);
+			loadedScriptSource = source;
 			editor.setValue(source);
 			updateJsDocDecorations(source);
+			updateModifiedState(source);
 			await updateBookmarkletLink(source);
 		} catch (error) {
 			setStatus(error.message);
@@ -546,6 +591,7 @@
 				monacoEditor.onDidChangeModelContent(() => {
 					const source = monacoEditor.getValue();
 					updateJsDocDecorations(source);
+					updateModifiedState(source);
 					scheduleBookmarkletUpdate();
 				});
 

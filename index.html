@@ -331,7 +331,9 @@
 
 	let editor;
 	let activeItem = null;
+	let activeEntry = null;
 	let jsDocDecorationIds = [];
+	let bookmarkletUpdateTimer = null;
 
 	function showPanel(name) {
 		document.getElementById('panel-explorer').style.display = name === 'explorer' ? 'flex' : 'none';
@@ -366,6 +368,33 @@
 			throw new Error(`Failed to fetch ${path}: ${response.status}`);
 		}
 		return response.text();
+	}
+
+	async function updateBookmarkletLink(scriptSource) {
+		if (!activeEntry) {
+			return;
+		}
+
+		bookmarkletLinkEl.innerHTML = `<i class="codicon codicon-bookmark"></i> ${activeEntry.name}`;
+
+		try {
+			bookmarkletLinkEl.href = await encodeBookmarkletHref(scriptSource);
+			setStatus("Ready");
+		} catch (error) {
+			bookmarkletLinkEl.href = "#";
+			setStatus(error.message);
+		}
+	}
+
+	function scheduleBookmarkletUpdate() {
+		if (bookmarkletUpdateTimer) {
+			window.clearTimeout(bookmarkletUpdateTimer);
+		}
+
+		bookmarkletUpdateTimer = window.setTimeout(() => {
+			bookmarkletUpdateTimer = null;
+			updateBookmarkletLink(editor.getValue());
+		}, 200);
 	}
 
 	function updateJsDocDecorations(source) {
@@ -411,13 +440,12 @@
 			setStatus("Loading…");
 			if (activeItem) activeItem.classList.remove("active");
 			activeItem = listItemEl;
+			activeEntry = entry;
 			if (activeItem) activeItem.classList.add("active");
 			const source = await fetchScript(`scripts/${entry.file}`);
 			editor.setValue(source);
 			updateJsDocDecorations(source);
-			bookmarkletLinkEl.innerHTML = `<i class="codicon codicon-bookmark"></i> ${entry.name}`;
-			bookmarkletLinkEl.href = await encodeBookmarkletHref(source);
-			setStatus("Ready");
+			await updateBookmarkletLink(source);
 		} catch (error) {
 			setStatus(error.message);
 		}
@@ -483,7 +511,7 @@
 				const monacoEditor = monaco.editor.create(document.getElementById("editor"), {
 					value: "// Pick a script from the left panel",
 					language: "javascript",
-					readOnly: true,
+					readOnly: false,
 					automaticLayout: true,
 					minimap: { enabled: false },
 					lineNumbersMinChars: 3,
@@ -492,6 +520,13 @@
 					theme: "bookmarklets-dark",
 					scrollBeyondLastLine: false
 				});
+
+				monacoEditor.onDidChangeModelContent(() => {
+					const source = monacoEditor.getValue();
+					updateJsDocDecorations(source);
+					scheduleBookmarkletUpdate();
+				});
+
 				resolve(monacoEditor);
 			});
 		});

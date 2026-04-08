@@ -334,6 +334,7 @@
 	let activeEntry = null;
 	let jsDocDecorationIds = [];
 	let bookmarkletUpdateTimer = null;
+	let bookmarkletUpdateVersion = 0;
 
 	function showPanel(name) {
 		document.getElementById('panel-explorer').style.display = name === 'explorer' ? 'flex' : 'none';
@@ -375,15 +376,36 @@
 			return;
 		}
 
+		const updateVersion = ++bookmarkletUpdateVersion;
 		bookmarkletLinkEl.innerHTML = `<i class="codicon codicon-bookmark"></i> ${activeEntry.name}`;
 
 		try {
-			bookmarkletLinkEl.href = await encodeBookmarkletHref(scriptSource);
+			const href = await encodeBookmarkletHref(scriptSource);
+
+			if (updateVersion !== bookmarkletUpdateVersion) {
+				return;
+			}
+
+			bookmarkletLinkEl.href = href;
+			bookmarkletLinkEl.setAttribute("href", href);
 			setStatus("Ready");
 		} catch (error) {
+			if (updateVersion !== bookmarkletUpdateVersion) {
+				return;
+			}
+
 			bookmarkletLinkEl.href = "#";
+			bookmarkletLinkEl.setAttribute("href", "#");
 			setStatus(error.message);
 		}
+	}
+
+	function syncBookmarkletFromEditor() {
+		if (!editor || !activeEntry) {
+			return Promise.resolve();
+		}
+
+		return updateBookmarkletLink(editor.getValue());
 	}
 
 	function scheduleBookmarkletUpdate() {
@@ -393,7 +415,7 @@
 
 		bookmarkletUpdateTimer = window.setTimeout(() => {
 			bookmarkletUpdateTimer = null;
-			updateBookmarkletLink(editor.getValue());
+			syncBookmarkletFromEditor();
 		}, 200);
 	}
 
@@ -554,6 +576,16 @@
 	}
 
 	window.addEventListener("load", init);
+	bookmarkletLinkEl.addEventListener("pointerdown", () => {
+		syncBookmarkletFromEditor();
+	});
+	bookmarkletLinkEl.addEventListener("dragstart", () => {
+		syncBookmarkletFromEditor();
+	});
+	bookmarkletLinkEl.addEventListener("click", (event) => {
+		event.preventDefault();
+		syncBookmarkletFromEditor();
+	});
 </script>
 <script src="https://cdn.jsdelivr.net/npm/terser@5/dist/bundle.min.js" integrity="sha256-i6/IavlSkPPuKNP1Sjzv+X6F30QDdPCNjEhKI2uFDns=" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.55.1/min/vs/loader.js" crossorigin="anonymous"></script>
